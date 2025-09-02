@@ -1,7 +1,8 @@
+// === index.js ===
 const { Client, LocalAuth } = require("whatsapp-web.js");
 require("dotenv").config();
 
-const { getCategoryId } = require("./utils/category");
+const { getCategoryId, getCategoryName } = require("./utils/category");
 const { getUserPhone } = require("./utils/user");
 const { getToken } = require("./services/auth");
 const { salvarMensagem } = require("./services/message");
@@ -18,20 +19,48 @@ client.on("ready", () => console.log("✅ Client ready!"));
 client.on("message_create", async (message) => {
   const chat = await message.getChat();
 
-  if (chat.isGroup && chat.name === GROUP_NAME) {
-    const messageTokens = message.body.split(/[,|-]/);
-    const description = messageTokens[0];
-    const amount = messageTokens[1];
-    const categoryId = getCategoryId(description);
-    const userPhone = getUserPhone(message);
+  // Só processa mensagens do grupo configurado
+  if (!chat.isGroup || chat.name !== GROUP_NAME) return;
 
-    if (!userPhone) {
-      console.log("⚠️ Usuário não reconhecido, ignorando mensagem");
-      return;
-    }
+  // Mensagem do bot → não processar (elas não têm "author")
+  if (!message.author) return;
 
+  const messageTokens = message.body.split(/[,|-]/);
+  const description = messageTokens[0];
+  const amount = messageTokens[1];
+  const categoryId = getCategoryId(description);
+  const categoryName = getCategoryName(categoryId);
+  const userPhone = getUserPhone(message);
+
+  if (!userPhone) {
+    console.log("⚠️ Usuário não reconhecido, ignorando mensagem");
+    return;
+  }
+
+  try {
+    // Garante que o token esteja válido
     await getToken(userPhone);
-    await salvarMensagem(description, amount, categoryId, userPhone);
+
+    // Tenta salvar no backend
+    const result = await salvarMensagem(description, amount, categoryId, userPhone);
+    const formattedAmount = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(amount);
+
+    if (result?.success) {
+      await chat.sendMessage(
+        `✅ Registro incluído com sucesso!\n` +
+        `📌 Descrição: *${description}*\n` +
+        `💰 Valor: *${formattedAmount}*\n` +
+        `🏷️ Categoria: *${categoryName}*`
+      );
+    } else {
+      await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente mais tarde.");
+    }
+  } catch (err) {
+    console.error("❌ Erro inesperado:", err.message);
+    await chat.sendMessage("⚠️ Erro inesperado ao processar sua mensagem.");
   }
 });
 

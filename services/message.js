@@ -14,11 +14,12 @@ async function salvarMensagem(description, amount, categoryId, phoneNumber) {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    console.log('✅ Registro incluido com sucesso!');
-    
+    console.log("✅ Registro incluído com sucesso!");
+    return { success: true }; // 🔑 devolve sucesso
 
   } catch (err) {
     console.error("❌ Erro ao salvar mensagem:", err.message);
+    return { success: false, error: err.message }; // 🔑 devolve erro
   }
 }
 
