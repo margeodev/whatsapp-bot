@@ -1,5 +1,6 @@
 // === index.js ===
 const { Client, LocalAuth } = require("whatsapp-web.js");
+const qrcode = require("qrcode-terminal"); // <-- import do pacote
 require("dotenv").config();
 
 const { getCategoryId, getCategoryName } = require("./utils/category");
@@ -15,6 +16,12 @@ const WWEBJS_PATH = process.env.WWEBJS_PATH || "./.wwebjs_auth";
 const client = new Client({
   authStrategy: new LocalAuth({ clientId: "meu-bot", dataPath: WWEBJS_PATH }),
   puppeteer: { headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] },
+});
+
+// Exibe QR Code no terminal apenas se precisar autenticar
+client.on("qr", (qr) => {
+  console.log("📷 Escaneie este QR Code com seu WhatsApp:");
+  qrcode.generate(qr, { small: true });
 });
 
 client.on("ready", () => console.log("✅ Client ready!"));
@@ -44,9 +51,9 @@ client.on("message_create", async (message) => {
     if (result?.success) {
       await chat.sendMessage(
         `✅ Registro incluído com sucesso!\n` +
-        `📌 Descrição: *${description}*\n` +
-        `💰 Valor: *${Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n` +
-        `🏷️ Categoria: *${categoryName}*`
+          `📌 Descrição: *${description}*\n` +
+          `💰 Valor: *${Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n` +
+          `🏷️ Categoria: *${categoryName}*`
       );
     } else {
       await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente.");
