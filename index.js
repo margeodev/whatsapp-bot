@@ -1,4 +1,8 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
+require('dotenv').config(); 
+
+
+const GROUP_NAME = process.env.GROUP_NAME;
 
 const client = new Client({
     authStrategy: new LocalAuth({
@@ -24,8 +28,7 @@ client.on('ready', () => {
 client.on('message_create', async message => {
     const chat = await message.getChat();
 
-    // Só processa se for o grupo "Eu sozinho"
-    if (chat.isGroup && chat.name === "Eu sozinho") {
+    if (chat.isGroup && chat.name === GROUP_NAME) {
         console.log(`📩 Mensagem no grupo "${chat.name}": ${message.body}`);
     }
 });
