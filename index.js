@@ -9,8 +9,11 @@ const { salvarMensagem } = require("./services/message");
 
 const GROUP_NAME = process.env.GROUP_NAME;
 
+// Caminho da sessão persistente
+const WWEBJS_PATH = process.env.WWEBJS_PATH || "./.wwebjs_auth";
+
 const client = new Client({
-  authStrategy: new LocalAuth({ clientId: "meu-bot" }),
+  authStrategy: new LocalAuth({ clientId: "meu-bot", dataPath: WWEBJS_PATH }),
   puppeteer: { headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] },
 });
 
@@ -19,11 +22,8 @@ client.on("ready", () => console.log("✅ Client ready!"));
 client.on("message_create", async (message) => {
   const chat = await message.getChat();
 
-  // Só processa mensagens do grupo configurado
   if (!chat.isGroup || chat.name !== GROUP_NAME) return;
-
-  // Mensagem do bot → não processar (elas não têm "author")
-  if (!message.author) return;
+  if (!message.author) return; // Ignora mensagens do próprio bot
 
   const messageTokens = message.body.split(/[,|-]/);
   const description = messageTokens[0];
@@ -38,25 +38,18 @@ client.on("message_create", async (message) => {
   }
 
   try {
-    // Garante que o token esteja válido
     await getToken(userPhone);
-
-    // Tenta salvar no backend
     const result = await salvarMensagem(description, amount, categoryId, userPhone);
-    const formattedAmount = new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(amount);
 
     if (result?.success) {
       await chat.sendMessage(
         `✅ Registro incluído com sucesso!\n` +
         `📌 Descrição: *${description}*\n` +
-        `💰 Valor: *${formattedAmount}*\n` +
+        `💰 Valor: *${Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n` +
         `🏷️ Categoria: *${categoryName}*`
       );
     } else {
-      await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente mais tarde.");
+      await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente.");
     }
   } catch (err) {
     console.error("❌ Erro inesperado:", err.message);
