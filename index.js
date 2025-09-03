@@ -1,6 +1,6 @@
 // === index.js ===
 const { Client, LocalAuth } = require("whatsapp-web.js");
-const qrcode = require("qrcode-terminal"); // <-- import do pacote
+const qrcode = require("qrcode-terminal"); // Para exibir QR Code no terminal
 require("dotenv").config();
 
 const { getCategoryId, getCategoryName } = require("./utils/category");
@@ -33,8 +33,30 @@ client.on("message_create", async (message) => {
   if (!message.author) return; // Ignora mensagens do próprio bot
 
   const messageTokens = message.body.split(/[,|-]/);
-  const description = messageTokens[0];
-  const amount = messageTokens[1];
+  const description = messageTokens[0]?.trim();
+  let amount = messageTokens[1]?.trim();
+
+  // Validação do formato
+  if (!description || !amount) {
+    await chat.sendMessage(
+      `⚠️ Formato inválido! \nUse: "descrição, valor" separados por vírgula ou -\n` +
+      `Padrões aceitos: \n` + 
+      `Almoço, 25.50\n` +
+      `Conta de energia - 25.50` 
+    );
+    return;
+  }
+
+  // Ajusta valores com vírgula para ponto (opcional)
+  amount = amount.replace(",", ".");
+  if (isNaN(Number(amount))) {
+    await chat.sendMessage(
+      `⚠️ Valor inválido. Certifique-se de enviar um número.\n` +
+      `Exemplo: "Almoço, 25.50"`
+    );
+    return;
+  }
+
   const categoryId = getCategoryId(description);
   const categoryName = getCategoryName(categoryId);
   const userPhone = getUserPhone(message);
@@ -51,9 +73,9 @@ client.on("message_create", async (message) => {
     if (result?.success) {
       await chat.sendMessage(
         `✅ Registro incluído com sucesso!\n` +
-          `📌 Descrição: *${description}*\n` +
-          `💰 Valor: *${Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n` +
-          `🏷️ Categoria: *${categoryName}*`
+        `📌 Descrição: *${description}*\n` +
+        `💰 Valor: *${Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n` +
+        `🏷️ Categoria: *${categoryName}*`
       );
     } else {
       await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente.");
