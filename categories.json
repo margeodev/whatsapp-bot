@@ -1,15 +1,15 @@
 {
-  "1": ["aluguel", "alugueis", "condominio", "condominios", "iptu", "casa", "casas", "moradia", "moradias"],
-  "2": ["mercado", "mercados", "supermercado", "supermercados", "compra", "compras"],
-  "3": ["energia", "conta energia", "conta de energia", "agua", "conta agua", "conta de agua", "luz", "telefone", "telefones", "internet", "internets", "conta de luz"],
-  "4": ["gasolina", "uber", "onibus", "transporte", "transportes", "combustivel", "taxi"],
-  "5": ["cinema", "festa", "festas", "lazer", "show", "viagem"],
-  "6": ["medico", "hospital", "saude", "exame", "exames", "consulta", "consultas"],
-  "7": ["bar", "restaurante", "restaurante chines", "almoço", "janta", "comida chinesa", "sanduiche", "habbibs", "habibs", "habibes", "habibis", "macdonalds", "mcdonalds", "ifood", "lanche", "lanches", "pizza", "pizzas", "pizzaria", "jantar", "almoco", "cafe", "bebida", "bebidas", "churrasco", "agua de coco"],
-  "8": ["manutencao", "reforma", "reformas", "obra"],
-  "9": ["padaria", "padarias", "pao", "paes", "bolo", "bolos"],
-  "10": ["farmacia", "farmacias", "remedio", "remedios", "medicamento", "medicamentos"],
-  "11": ["outros", "diverso", "diversos"],
-  "12": ["pet", "pets", "cachorro", "cachorros", "gato", "gatos", "racao", "racoes", "areia gato", "areia para gato", "areia do gato", "banho e tosa", "banho", "tosa"],
-  "13": ["carro", "carros", "oficina", "oficinas", "mecanico", "mecanico", "pneu", "pneus", "manutençao carro", "manutencao carro", "manutençao do carro", "manutençao carros"]
+    "1": ["aluguel", "alugueis", "condominio", "iptu", "casa", "casas", "moradia", "terreno"],
+    "2": ["mercado", "mercados", "supermercado", "supermercados", "compra", "compras"],
+    "3": ["energia", "conta energia", "conta de energia", "agua", "conta agua", "conta de agua", "luz", "telefone", "telefones", "internet", "netflix", "conta de luz"],
+    "4": ["gasolina", "uber", "onibus", "transporte", "transportes", "combustivel", "taxi"],
+    "5": ["cinema", "festa", "festas", "lazer", "show", "viagem"],
+    "6": ["medico", "hospital", "saude", "exame", "exames", "consulta", "consultas"],
+    "7": ["bar", "restaurante", "restaurante chines", "almoço", "janta", "comida chinesa", "habbibs", "habibs", "habibes", "habibis", "macdonalds", "mcdonalds", "ifood", "lanche", "lanches", "pizza", "pizzas", "pizzaria", "jantar", "almoco", "almocos", "cafe", "cafes", "bebida", "bebidas", "churrasco", "churrascos", "agua de coco", "aguas de coco"],
+    "8": ["manutencao", "reforma", "reformas", "obra"],
+    "9": ["padaria", "padarias", "pao", "paes", "bolo"],
+    "10": ["farmacia", "farmacias", "remedio", "remedios", "medicamento", "medicamentos"],
+    "11": ["outros", "diverso", "diversos"],
+    "12": ["pet", "pets", "cachorro", "cachorros", "gato", "gatos", "racao", "racoes", "areia gato", "areia para gato", "areia do gato", "banho e tosa", "banho", "tosa"],
+    "13": ["carro", "carros", "oficina", "oficinas", "mecanico", "mecanico", "pneu", "pneus", "manutençao carro", "manutencao carro", "manutençao do carro", "manutençao carros"]
   }
