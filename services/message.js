@@ -12,7 +12,7 @@ async function salvarMensagem(description, amount, categoryId, phoneNumber, isPe
       description,
       amount,
       categoryId,
-      isPersonal // será enviado como false por padrão, ou true se for pessoal
+      isPersonal
     };
 
     await axios.post(
@@ -30,4 +30,26 @@ async function salvarMensagem(description, amount, categoryId, phoneNumber, isPe
   }
 }
 
-module.exports = { salvarMensagem };
+async function listarMensagensPessoais(phoneNumber, userName) {
+  try {
+    const token = await getToken(phoneNumber);
+    
+    const response = await axios.get(
+      `${API_URL}/api/v1/entries/current-month/personal`,
+      { headers: {
+          Authorization: `Bearer ${token}`,
+          username: userName
+        } 
+      }
+    );
+
+    console.log("📦 Mensagens pessoais recuperadas com sucesso!");
+    return { success: true, data: response.data };
+
+  } catch (err) {
+    console.error("❌ Erro ao listar mensagens pessoais:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { salvarMensagem, listarMensagensPessoais };

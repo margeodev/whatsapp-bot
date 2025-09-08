@@ -3,9 +3,9 @@ const qrcode = require("qrcode-terminal");
 require("dotenv").config();
 
 const { getCategoryId, getCategoryName } = require("./utils/category");
-const { getUserPhone } = require("./utils/user");
+const { getUserPhone, getUserName } = require("./utils/user");
 const { getToken } = require("./services/auth");
-const { salvarMensagem } = require("./services/message");
+const { salvarMensagem, listarMensagensPessoais } = require("./services/message");
 
 const GROUP_NAME = process.env.GROUP_NAME;
 const WWEBJS_PATH = process.env.WWEBJS_PATH || "./.wwebjs_auth";
@@ -29,6 +29,53 @@ client.on("message_create", async (message) => {
   if (!message.author) return;
 
   const rawTokens = message.body.split(/[,|-]/).map(t => t.trim());
+  const userPhone = getUserPhone(message);
+  const userName = getUserName(message);
+
+  if (!userPhone) {
+    console.log("⚠️ Usuário não reconhecido, ignorando mensagem");
+    return;
+  }
+
+  // 📋 Verifica se é uma solicitação de listagem de despesas pessoais
+  const isListRequest = rawTokens.length === 2 &&
+    rawTokens[0]?.toLowerCase() === "pessoal" &&
+    rawTokens[1]?.toLowerCase() === "list";
+
+  if (isListRequest) {
+    try {
+      const result = await listarMensagensPessoais(userPhone, userName);
+
+      if (!result.success) {
+        await chat.sendMessage("⚠️ Não foi possível consultar as despesas pessoais. Tente novamente mais tarde.");
+        return;
+      }
+
+      const entries = result.data;
+
+      if (!entries.length) {
+        await chat.sendMessage("📭 Nenhuma despesa pessoal registrada neste mês.");
+        return;
+      }
+
+      let reply = `📋 *Despesas pessoais do mês:*\n\n`;
+      entries.forEach((entry, index) => {
+        reply += `${index + 1}. *${entry.description}* - ${Number(entry.amount).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}\n`;
+      });
+
+      await chat.sendMessage(reply);
+    } catch (err) {
+      console.error("❌ Erro ao consultar despesas pessoais:", err.message);
+      await chat.sendMessage("⚠️ Erro inesperado ao consultar despesas pessoais.");
+    }
+
+    return;
+  }
+
+  // 🧾 Processamento de mensagem de registro
   let isPersonal = false;
   let description = "";
   let amount = "";
@@ -74,12 +121,6 @@ client.on("message_create", async (message) => {
 
   const categoryId = getCategoryId(description);
   const categoryName = getCategoryName(categoryId);
-  const userPhone = getUserPhone(message);
-
-  if (!userPhone) {
-    console.log("⚠️ Usuário não reconhecido, ignorando mensagem");
-    return;
-  }
 
   try {
     await getToken(userPhone);
