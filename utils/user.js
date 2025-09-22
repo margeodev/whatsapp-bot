@@ -2,16 +2,19 @@ require("dotenv").config();
 
 const USER_1_PHONE = process.env.USER_1_PHONE;
 const USER_1_NAME = process.env.USER_1_NAME;
+const USER_1_EMAIL = process.env.USER_1_EMAIL;
+
 
 const USER_2_PHONE = process.env.USER_2_PHONE;
 const USER_2_NAME = process.env.USER_2_NAME;
+const USER_2_EMAIL = process.env.USER_2_EMAIL;
 
-function getUserPhone(msg) {
+function getUserEmail(msg) {
   let message = msg.author || msg.from;  
   let userPhone = message.substring(0, 12);
 
-  if (userPhone === USER_1_PHONE) return USER_1_PHONE;
-  if (userPhone === USER_2_PHONE) return USER_2_PHONE;
+  if (userPhone === USER_1_PHONE) return USER_1_EMAIL;
+  if (userPhone === USER_2_PHONE) return USER_2_EMAIL;
 
   return null;
 }
@@ -27,4 +30,4 @@ function getUserName(msg) {
   return null;
 }
 
-module.exports = { getUserPhone, getUserName };
+module.exports = { getUserEmail, getUserName };

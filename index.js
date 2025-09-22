@@ -3,7 +3,7 @@ const qrcode = require("qrcode-terminal");
 require("dotenv").config();
 
 const { getCategoryId, getCategoryName } = require("./utils/category");
-const { getUserPhone, getUserName } = require("./utils/user");
+const { getUserEmail, getUserName } = require("./utils/user");
 const { getToken } = require("./services/auth");
 const { salvarMensagem, listarMensagensPessoais } = require("./services/message");
 
@@ -29,10 +29,10 @@ client.on("message_create", async (message) => {
   if (!message.author) return;
 
   const rawTokens = message.body.split(/[,|-]/).map(t => t.trim());
-  const userPhone = getUserPhone(message);
+  const userEmail = getUserEmail(message);
   const userName = getUserName(message);
 
-  if (!userPhone) {
+  if (!userEmail) {
     console.log("⚠️ Usuário não reconhecido, ignorando mensagem");
     return;
   }
@@ -44,7 +44,7 @@ client.on("message_create", async (message) => {
 
   if (isListRequest) {
     try {
-      const result = await listarMensagensPessoais(userPhone, userName);
+      const result = await listarMensagensPessoais(userEmail, userName);
 
       if (!result.success) {
         await chat.sendMessage("⚠️ Não foi possível consultar as despesas pessoais. Tente novamente mais tarde.");
@@ -123,8 +123,8 @@ client.on("message_create", async (message) => {
   const categoryName = getCategoryName(categoryId);
 
   try {
-    await getToken(userPhone);
-    const result = await salvarMensagem(description, amount, categoryId, userPhone, isPersonal);
+    await getToken(userEmail);
+    const result = await salvarMensagem(description, amount, categoryId, userEmail, isPersonal);
 
     if (result?.success) {
       await chat.sendMessage(

@@ -2,46 +2,73 @@ const axios = require("axios");
 const { jwtDecode } = require("jwt-decode");
 require("dotenv").config();
 
-const USER_1_PHONE = process.env.USER_1_PHONE;
-const USER_2_PHONE = process.env.USER_2_PHONE;
 const API_URL = process.env.API_URL;
 
-let tokens = {
-  [USER_1_PHONE]: { token: null, expiresAt: 0 },
-  [USER_2_PHONE]: { token: null, expiresAt: 0 },
+// Mapeamento dos usuários (email -> senha)
+const USERS = {
+  [process.env.USER_1_EMAIL]: process.env.USER_1_PASS,
+  [process.env.USER_2_EMAIL]: process.env.USER_2_PASS,
 };
 
-async function getToken(phoneNumber) {
-  const userCache = tokens[phoneNumber];
+// Cache de tokens (por email)
+const tokenCache = Object.keys(USERS).reduce((acc, email) => {
+  acc[email] = { token: null, expiresAt: 0 };
+  return acc;
+}, {});
 
-  if (userCache.token && Date.now() < userCache.expiresAt) {
+/**
+ * Cria header Authorization Basic <base64(email:pass)>
+ */
+function buildBasicAuthHeader(email, password) {
+  const credentials = `${email}:${password}`;
+  const encoded = Buffer.from(credentials).toString("base64");
+  return `Basic ${encoded}`;
+}
+
+/**
+ * Obtém um token válido para o email informado
+ */
+async function getToken(email) {
+  if (!USERS[email]) {
+    throw new Error(`📛 Usuário não configurado: ${email}`);
+  }
+
+  const userCache = tokenCache[email];
+  const now = Date.now();
+
+  // Token em cache válido
+  if (userCache.token && now < userCache.expiresAt) {
     return userCache.token;
   }
 
-  let password = null;
-  if (phoneNumber === USER_1_PHONE) {
-    password = process.env.USER_1_PASS;
-  } else if (phoneNumber === USER_2_PHONE) {
-    password = process.env.USER_2_PASS;
+  const password = USERS[email];
+  try {
+    const response = await axios.post(
+      `${API_URL}/auth/login`,
+      null,
+      {
+        headers: {
+          Authorization: buildBasicAuthHeader(email, password),
+        },
+      }
+    );
+
+    const token = response.data;
+    if (!token) throw new Error("❌ Token não retornado pela API");
+
+    // Decodifica expiração do JWT
+    const decoded = jwtDecode(token);
+    const exp = decoded.exp * 1000;
+
+    userCache.token = token;
+    userCache.expiresAt = exp;
+
+    console.log(`✅ Novo token para ${email}, expira em: ${new Date(exp).toLocaleString()}`);
+    return token;
+  } catch (err) {
+    console.error(`🚨 Erro ao gerar token para ${email}:`, err.message);
+    throw err;
   }
-
-  if (!password) throw new Error(`Senha não configurada para ${phoneNumber}`);
-
-  const response = await axios.post(`${API_URL}/auth/login/robo`, null, {
-    headers: { phoneNumber, password },
-  });
-
-  const token = response.data?.token;
-  if (!token) throw new Error("Token não retornado pela API");
-
-  const decoded = jwtDecode(token);
-  const exp = decoded.exp * 1000;
-
-  userCache.token = token;
-  userCache.expiresAt = exp;
-
-  console.log(`✅ Novo token gerado para ${phoneNumber}, expira em: ${new Date(exp).toLocaleString()}`);
-  return token;
 }
 
 module.exports = { getToken };

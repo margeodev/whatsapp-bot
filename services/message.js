@@ -4,52 +4,65 @@ require("dotenv").config();
 
 const API_URL = process.env.API_URL;
 
-async function salvarMensagem(description, amount, categoryId, phoneNumber, isPersonal = false) {
+/**
+ * Executa uma requisição com tratamento de erros padronizado
+ * @param {Function} fn função async que faz a request
+ * @param {string} successMsg mensagem de sucesso
+ */
+async function handleRequest(fn, successMsg) {
   try {
-    const token = await getToken(phoneNumber);
-
-    const payload = {
-      description,
-      amount,
-      categoryId,
-      isPersonal
-    };
-
-    await axios.post(
-      `${API_URL}/api/v1/entries`,
-      payload,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    console.log("✅ Registro incluído com sucesso!");
-    return { success: true };
-
+    const data = await fn();
+    console.log(`✅ ${successMsg}`);
+    return { success: true, data };
   } catch (err) {
-    console.error("❌ Erro ao salvar mensagem:", err.message);
+    console.error("❌ Erro na requisição:", err.message);
     return { success: false, error: err.message };
   }
 }
 
-async function listarMensagensPessoais(phoneNumber, userName) {
-  try {
-    const token = await getToken(phoneNumber);
-    
-    const response = await axios.get(
-      `${API_URL}/api/v1/entries/current-month/personal`,
-      { headers: {
-          Authorization: `Bearer ${token}`,
-          username: userName
-        } 
-      }
-    );
+/**
+ * Cria headers com token JWT
+ */
+async function authHeaders(userEmail, extraHeaders = {}) {
+  const token = await getToken(userEmail);
+  return { Authorization: `Bearer ${token}`, ...extraHeaders };
+}
 
-    console.log("📦 Mensagens pessoais recuperadas com sucesso!");
-    return { success: true, data: response.data };
+/**
+ * Salva uma nova despesa
+ * @param {string} description descrição da despesa
+ * @param {number} amount valor
+ * @param {number} categoryId id da categoria
+ * @param {string} userEmail email do usuário
+ * @param {boolean} [isPersonal=false] se é despesa pessoal
+ */
+async function salvarMensagem(description, amount, categoryId, userEmail, isPersonal = false) {
+  return handleRequest(
+    async () => {
+      const headers = await authHeaders(userEmail);
+      const payload = { description, amount, categoryId, isPersonal };
+      await axios.post(`${API_URL}/api/v1/expenses`, payload, { headers });
+    },
+    "Registro incluído com sucesso!"
+  );
+}
 
-  } catch (err) {
-    console.error("❌ Erro ao listar mensagens pessoais:", err.message);
-    return { success: false, error: err.message };
-  }
+/**
+ * Lista despesas pessoais do mês atual
+ * @param {string} userEmail email do usuário
+ * @param {string} userName nome do usuário
+ */
+async function listarMensagensPessoais(userEmail, userName) {
+  console.log('param 1: ', userEmail);
+  
+  return handleRequest(
+    async () => {
+      const headers = await authHeaders(userEmail, { username: userName });
+      const response = await axios.get(`${API_URL}/api/v1/expenses/current-month/personal`, { headers });
+      return response.data;
+    },
+    "Mensagens pessoais recuperadas com sucesso!"
+  );
 }
 
 module.exports = { salvarMensagem, listarMensagensPessoais };
