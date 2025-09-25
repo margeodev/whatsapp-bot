@@ -54,7 +54,7 @@ async function salvarMensagem(description, amount, categoryId, userEmail, isPers
  */
 async function listarMensagensPessoais(userEmail, userName) {
   console.log('param 1: ', userEmail);
-  
+
   return handleRequest(
     async () => {
       const headers = await authHeaders(userEmail, { username: userName });
@@ -65,4 +65,24 @@ async function listarMensagensPessoais(userEmail, userName) {
   );
 }
 
-module.exports = { salvarMensagem, listarMensagensPessoais };
+/**
+ * Lista os totais de despesas agrupados por categoria para o mês atual
+ * @param {string} userEmail email do usuário
+ * @param {string} userName nome do usuário
+ */
+async function listarTotaisPorCategoria(userEmail, userName) {
+  console.log('Buscando totais por categoria para:', userEmail);
+
+  return handleRequest(
+    async () => {
+      const headers = await authHeaders(userEmail, { username: userName });
+      // 👇 URL AJUSTADA CONFORME A SUA API
+      const response = await axios.get(`${API_URL}/api/v1/reports?monthsBack=0`, { headers });
+      return response.data;
+    },
+    "Totais por categoria recuperados com sucesso!"
+  );
+}
+
+
+module.exports = { salvarMensagem, listarMensagensPessoais, listarTotaisPorCategoria };

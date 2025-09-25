@@ -5,7 +5,11 @@ require("dotenv").config();
 const { getCategoryId, getCategoryName } = require("./utils/category");
 const { getUserEmail, getUserName } = require("./utils/user");
 const { getToken } = require("./services/auth");
-const { salvarMensagem, listarMensagensPessoais } = require("./services/message");
+const {
+  salvarMensagem,
+  listarMensagensPessoais,
+  listarTotaisPorCategoria,
+} = require("./services/message");
 
 const GROUP_NAME = process.env.GROUP_NAME;
 const WWEBJS_PATH = process.env.WWEBJS_PATH || "./.wwebjs_auth";
@@ -22,13 +26,52 @@ client.on("qr", (qr) => {
 
 client.on("ready", () => console.log("✅ Client ready!"));
 
+// 🔹 Estados temporários por usuário
+const userStates = {};
+
+/**
+ * Envia o menu principal
+ */
+async function enviarMenu(chat) {
+  const menu =
+    `📋 *Menu de opções*
+1️⃣ - Listar despesas pessoais
+2️⃣ - Listar despesas por categoria
+
+👉 Digite o número da opção desejada.`;
+  await chat.sendMessage(menu);
+}
+
+/**
+ * Envia o menu de categorias
+ */
+async function enviarMenuCategorias(chat) {
+  const categorias =
+    `📊 *Categorias disponíveis*
+1 - Moradia
+2 - Supermercado
+3 - Conta Consumo
+4 - Transporte
+5 - Lazer
+6 - Saúde
+7 - Bares e Restaurantes
+8 - Manutenção Casa
+9 - Padaria
+10 - Farmácia
+11 - Outros
+12 - Pets
+13 - Manutenção Carro
+
+👉 Digite o número da categoria ou *0* para voltar ao menu principal.`;
+  await chat.sendMessage(categorias);
+}
+
 client.on("message_create", async (message) => {
   const chat = await message.getChat();
 
   if (!chat.isGroup || chat.name !== GROUP_NAME) return;
   if (!message.author) return;
 
-  const rawTokens = message.body.split(/[,|-]/).map(t => t.trim());
   const userEmail = getUserEmail(message);
   const userName = getUserName(message);
 
@@ -37,45 +80,162 @@ client.on("message_create", async (message) => {
     return;
   }
 
-  // 📋 Verifica se é uma solicitação de listagem de despesas pessoais
-  const isListRequest = rawTokens.length === 2 &&
-    rawTokens[0]?.toLowerCase() === "pessoal" &&
-    rawTokens[1]?.toLowerCase() === "list";
+  const body = message.body.trim().toLowerCase();
+  const rawTokens = body.split(/[,|-]/).map((t) => t.trim());
 
-  if (isListRequest) {
+  if (body === "menu") {
+    userStates[userEmail] = "awaitingMenuOption";
+    await enviarMenu(chat);
+    return;
+  }
+
+  // === MENU PRINCIPAL ===
+  if (userStates[userEmail] === "awaitingMenuOption") {
+    if (body === "1") {
+      try {
+        const result = await listarMensagensPessoais(userEmail, userName);
+
+        if (!result.success) {
+          await chat.sendMessage("⚠️ Não foi possível consultar as despesas pessoais. Tente novamente mais tarde.");
+          return;
+        }
+
+        const entries = result.data;
+        if (!entries.length) {
+          await chat.sendMessage("📭 Nenhuma despesa pessoal registrada neste mês.\n\n1️⃣ - Voltar ao menu principal");
+          userStates[userEmail] = "awaitingPersonalAction";
+          return;
+        }
+
+        let reply = `📋 *Despesas pessoais do mês:*\n\n`;
+        let total = 0;
+        entries.forEach((entry, index) => {
+          const valor = Number(entry.amount);
+          total += valor;
+          reply += `${index + 1}. *${entry.description}* - ${valor.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          })}\n`;
+        });
+
+        reply += `\n💰 *Total:* ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n`;
+        reply += `\n1️⃣ - Voltar ao menu principal`;
+
+        await chat.sendMessage(reply);
+        userStates[userEmail] = "awaitingPersonalAction";
+      } catch (err) {
+        console.error("❌ Erro ao consultar despesas pessoais:", err.message);
+        await chat.sendMessage("⚠️ Erro inesperado ao consultar despesas pessoais.");
+      }
+
+      return;
+    }
+    if (body === "2") {
+      userStates[userEmail] = "awaitingCategoryOption";
+      await enviarMenuCategorias(chat);
+      return;
+    }
+
+    await chat.sendMessage("⚠️ Opção inválida. Digite apenas *1* ou *2*.");
+    return;
+  }
+
+  // === DESPESAS PESSOAIS (VOLTAR) ===
+  if (userStates[userEmail] === "awaitingPersonalAction") {
+    if (body === "1") {
+      userStates[userEmail] = "awaitingMenuOption";
+      await enviarMenu(chat);
+    } else {
+      await chat.sendMessage("⚠️ Opção inválida. Digite *1* para voltar ao menu principal.");
+    }
+    return;
+  }
+
+  // === CATEGORIAS ===
+  if (userStates[userEmail] === "awaitingCategoryOption") {
+    if (body === "0") {
+      userStates[userEmail] = "awaitingMenuOption";
+      await enviarMenu(chat);
+      return;
+    }
+
+    const categoryNum = parseInt(body, 10);
+    const categorias = {
+      1: "Moradia",
+      2: "Supermercado",
+      3: "Conta Consumo",
+      4: "Transporte",
+      5: "Lazer",
+      6: "Saúde",
+      7: "Bares e Restaurantes",
+      8: "Manutenção Casa",
+      9: "Padaria",
+      10: "Farmácia",
+      11: "Outros",
+      12: "Pets",
+      13: "Manutenção Carro",
+    };
+
+    if (!categorias[categoryNum]) {
+      await chat.sendMessage("⚠️ Categoria inválida. Digite um número entre 1 e 13 ou *0* para voltar.");
+      return;
+    }
+
     try {
-      const result = await listarMensagensPessoais(userEmail, userName);
+      const result = await listarTotaisPorCategoria(userEmail, userName);
 
       if (!result.success) {
-        await chat.sendMessage("⚠️ Não foi possível consultar as despesas pessoais. Tente novamente mais tarde.");
+        await chat.sendMessage("⚠️ Não foi possível consultar os totais por categoria. Tente novamente mais tarde.");
         return;
       }
 
-      const entries = result.data;
+      const totals = result.data;
+      const categoriaSelecionada = categorias[categoryNum];
+      const item = totals.find((t) =>
+        categoriaSelecionada.toLowerCase().includes(t.categoryDescription.toLowerCase())
+      );
 
-      if (!entries.length) {
-        await chat.sendMessage("📭 Nenhuma despesa pessoal registrada neste mês.");
+      if (!item) {
+        await chat.sendMessage(
+          `📭 Nenhuma despesa encontrada para *${categoriaSelecionada}* neste mês.\n\n` +
+          `1️⃣ - Voltar para categorias\n` +
+          `2️⃣ - Voltar ao menu principal`
+        );
+        userStates[userEmail] = "awaitingCategoryAction";
         return;
       }
 
-      let reply = `📋 *Despesas pessoais do mês:*\n\n`;
-      entries.forEach((entry, index) => {
-        reply += `${index + 1}. *${entry.description}* - ${Number(entry.amount).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        })}\n`;
-      });
+      await chat.sendMessage(
+        `📊 *Resumo de ${categoriaSelecionada}:*\n\n` +
+        `💰 Total: *${Number(item.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n\n` +
+        `1️⃣ - Voltar para categorias\n` +
+        `2️⃣ - Voltar ao menu principal`
+      );
 
-      await chat.sendMessage(reply);
+      userStates[userEmail] = "awaitingCategoryAction";
     } catch (err) {
-      console.error("❌ Erro ao consultar despesas pessoais:", err.message);
-      await chat.sendMessage("⚠️ Erro inesperado ao consultar despesas pessoais.");
+      console.error("❌ Erro ao consultar totais por categoria:", err.message);
+      await chat.sendMessage("⚠️ Erro inesperado ao consultar totais por categoria.");
     }
 
     return;
   }
 
-  // 🧾 Processamento de mensagem de registro
+  // === AÇÕES APÓS VER CATEGORIA ===
+  if (userStates[userEmail] === "awaitingCategoryAction") {
+    if (body === "1") {
+      userStates[userEmail] = "awaitingCategoryOption";
+      await enviarMenuCategorias(chat);
+    } else if (body === "2") {
+      userStates[userEmail] = "awaitingMenuOption";
+      await enviarMenu(chat);
+    } else {
+      await chat.sendMessage("⚠️ Opção inválida. Digite *1* para voltar às categorias ou *2* para o menu principal.");
+    }
+    return;
+  }
+
+  // === REGISTRO DE NOVA DESPESA ===
   let isPersonal = false;
   let description = "";
   let amount = "";
@@ -118,7 +278,6 @@ client.on("message_create", async (message) => {
     );
     return;
   }
-
   const categoryId = getCategoryId(description);
   const categoryName = getCategoryName(categoryId);
 
@@ -132,7 +291,7 @@ client.on("message_create", async (message) => {
         `📌 Descrição: *${description}*\n` +
         `💰 Valor: *${Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*\n` +
         `🏷️ Categoria: *${categoryName}*` +
-        (isPersonal ? `\n👤 Tipo: *Pessoal*` : "")
+        `${isPersonal ? `\n👤 Tipo: *Pessoal*` : ""}`
       );
     } else {
       await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente.");
