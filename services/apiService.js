@@ -66,6 +66,29 @@ async function listarMensagensPessoais(userEmail, userName) {
 }
 
 /**
+ * Busca a lista de todas as categorias disponíveis na API.
+ */
+async function listarCategorias(userEmail) {
+  return handleRequest(
+    async () => {
+      // Usamos um email de usuário apenas para obter um token válido.
+      const headers = await authHeaders(userEmail);
+      const response = await axios.get(`${API_URL}/api/v1/categories`, { headers });
+      return response.data;
+    },
+    "Categorias recuperadas com sucesso!"
+  );
+}
+
+// ATUALIZE SEU MODULE.EXPORTS PARA INCLUIR A NOVA FUNÇÃO
+module.exports = {
+  salvarMensagem,
+  listarMensagensPessoais,
+  listarTotaisPorCategoria,
+  listarCategorias, // <-- Adicione aqui
+};
+
+/**
  * Lista os totais de despesas agrupados por categoria para o mês atual
  * @param {string} userEmail email do usuário
  * @param {string} userName nome do usuário
@@ -85,4 +108,4 @@ async function listarTotaisPorCategoria(userEmail, userName) {
 }
 
 
-module.exports = { salvarMensagem, listarMensagensPessoais, listarTotaisPorCategoria };
+module.exports = { salvarMensagem, listarMensagensPessoais, listarTotaisPorCategoria, listarCategorias };
