@@ -58,7 +58,7 @@ async function listarMensagensPessoais(userEmail, userName) {
   return handleRequest(
     async () => {
       const headers = await authHeaders(userEmail, { username: userName });
-      const response = await axios.get(`${API_URL}/api/v1/expenses/current-month/personal`, { headers });
+      const response = await axios.get(`${API_URL}/api/v1/expenses/period?isPersonal=true`, { headers });
       return response.data;
     },
     "Mensagens pessoais recuperadas com sucesso!"
