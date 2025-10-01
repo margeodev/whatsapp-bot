@@ -1,20 +1,22 @@
 require("dotenv").config();
 
-const USER_1_PHONE = process.env.USER_1_PHONE;
+const USER_1_ID = process.env.USER_1_ID;
 const USER_1_NAME = process.env.USER_1_NAME;
 const USER_1_EMAIL = process.env.USER_1_EMAIL;
 
 
-const USER_2_PHONE = process.env.USER_2_PHONE;
+const USER_2_ID = process.env.USER_2_ID;
 const USER_2_NAME = process.env.USER_2_NAME;
 const USER_2_EMAIL = process.env.USER_2_EMAIL;
 
 function getUserEmail(msg) {
-  let message = msg.author || msg.from;  
-  let userPhone = message.substring(0, 12);
+  let message = msg.author || msg.from;
+  let userId = message.substring(0, 14);
+  console.log('userId: ', userId);
 
-  if (userPhone === USER_1_PHONE) return USER_1_EMAIL;
-  if (userPhone === USER_2_PHONE) return USER_2_EMAIL;
+
+  if (userId === USER_1_ID) return USER_1_EMAIL;
+  if (userId === USER_2_ID) return USER_2_EMAIL;
 
   return null;
 }
@@ -22,10 +24,10 @@ function getUserEmail(msg) {
 function getUserName(msg) {
   let message = msg.author || msg.from;
 
-  let userPhone = message.substring(0, 12);
+  let userId = message.substring(0, 14);
 
-  if (userPhone === USER_1_PHONE) return USER_1_NAME;
-  if (userPhone === USER_2_PHONE) return USER_2_NAME;
+  if (userId === USER_1_ID) return USER_1_NAME;
+  if (userId === USER_2_ID) return USER_2_NAME;
 
   return null;
 }
