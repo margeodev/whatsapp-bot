@@ -1,25 +1,50 @@
 const axios = require("axios");
-const { getToken } = require("./auth");
+const { getToken, logout } = require("./auth");
 require("dotenv").config();
-
 const API_URL = process.env.API_URL;
-
 /**
  * Executa uma requisição com tratamento de erros padronizado
+ * Inclui retry automático em caso de 401 (token expirado)
  * @param {Function} fn função async que faz a request
  * @param {string} successMsg mensagem de sucesso
+ * @param {string} userEmail email do usuário para retry
  */
-async function handleRequest(fn, successMsg) {
+async function handleRequest(fn, successMsg, userEmail = null) {
   try {
     const data = await fn();
     console.log(`✅ ${successMsg}`);
     return { success: true, data };
   } catch (err) {
+    // Se recebeu 401 e tem email para retry
+    if (err.response?.status === 401 && userEmail) {
+      console.log(`⚠️ Token expirado para ${userEmail}, tentando renovar...`);
+      
+      try {
+        // Força obtenção de novo token (vai tentar refresh automaticamente)
+        await getToken(userEmail);
+        
+        // Retry da requisição original
+        const retryData = await fn();
+        console.log(`✅ ${successMsg} (após retry)`);
+        return { success: true, data: retryData };
+        
+      } catch (retryErr) {
+        console.error(`❌ Erro após retry para ${userEmail}:`, retryErr.message);
+        
+        // Se retry falhou, pode ser que refresh token também expirou
+        if (retryErr.response?.status === 401) {
+          logout(userEmail);
+          return { success: false, error: "Sessão expirada. Reautenticação necessária." };
+        }
+        
+        return { success: false, error: retryErr.message };
+      }
+    }
+    
     console.error("❌ Erro na requisição:", err.message);
     return { success: false, error: err.message };
   }
 }
-
 /**
  * Cria headers com token JWT
  */
@@ -27,7 +52,6 @@ async function authHeaders(userEmail, extraHeaders = {}) {
   const token = await getToken(userEmail);
   return { Authorization: `Bearer ${token}`, ...extraHeaders };
 }
-
 /**
  * Salva uma nova despesa
  * @param {string} description descrição da despesa
@@ -43,10 +67,10 @@ async function salvarMensagem(description, amount, categoryId, userEmail, isPers
       const payload = { description, amount, categoryId, isPersonal };
       await axios.post(`${API_URL}/api/v1/expenses`, payload, { headers });
     },
-    "Registro incluído com sucesso!"
+    "Registro incluído com sucesso!",
+    userEmail
   );
 }
-
 /**
  * Lista despesas pessoais do mês atual
  * @param {string} userEmail email do usuário
@@ -54,17 +78,16 @@ async function salvarMensagem(description, amount, categoryId, userEmail, isPers
  */
 async function listarMensagensPessoais(userEmail, userName) {
   console.log('param 1: ', userEmail);
-
   return handleRequest(
     async () => {
       const headers = await authHeaders(userEmail, { username: userName });
       const response = await axios.get(`${API_URL}/api/v1/expenses/period?isPersonal=true`, { headers });
       return response.data;
     },
-    "Mensagens pessoais recuperadas com sucesso!"
+    "Mensagens pessoais recuperadas com sucesso!",
+    userEmail
   );
 }
-
 /**
  * Busca a lista de todas as categorias disponíveis na API.
  */
@@ -76,18 +99,10 @@ async function listarCategorias(userEmail) {
       const response = await axios.get(`${API_URL}/api/v1/categories`, { headers });
       return response.data;
     },
-    "Categorias recuperadas com sucesso!"
+    "Categorias recuperadas com sucesso!",
+    userEmail
   );
 }
-
-// ATUALIZE SEU MODULE.EXPORTS PARA INCLUIR A NOVA FUNÇÃO
-module.exports = {
-  salvarMensagem,
-  listarMensagensPessoais,
-  listarTotaisPorCategoria,
-  listarCategorias, // <-- Adicione aqui
-};
-
 /**
  * Lista os totais de despesas agrupados por categoria para o mês atual
  * @param {string} userEmail email do usuário
@@ -95,7 +110,6 @@ module.exports = {
  */
 async function listarTotaisPorCategoria(userEmail, userName) {
   console.log('Buscando totais por categoria para:', userEmail);
-
   return handleRequest(
     async () => {
       const headers = await authHeaders(userEmail, { username: userName });
@@ -103,9 +117,8 @@ async function listarTotaisPorCategoria(userEmail, userName) {
       const response = await axios.get(`${API_URL}/api/v1/reports?monthsBack=0`, { headers });
       return response.data;
     },
-    "Totais por categoria recuperados com sucesso!"
+    "Totais por categoria recuperados com sucesso!",
+    userEmail
   );
 }
-
-
 module.exports = { salvarMensagem, listarMensagensPessoais, listarTotaisPorCategoria, listarCategorias };
