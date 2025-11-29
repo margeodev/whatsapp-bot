@@ -1,33 +1,76 @@
 require("dotenv").config();
 
-const USER_1_ID = process.env.USER_1_ID;
-const USER_1_NAME = process.env.USER_1_NAME;
-const USER_1_EMAIL = process.env.USER_1_EMAIL;
+// Carrega usuários dinamicamente do .env
+function loadUsers() {
+  const users = {};
+  let userIndex = 1;
+  
+  while (process.env[`USER_${userIndex}_ID`]) {
+    users[userIndex] = {
+      id: process.env[`USER_${userIndex}_ID`],
+      name: process.env[`USER_${userIndex}_NAME`],
+      email: process.env[`USER_${userIndex}_EMAIL`],
+    };
+    userIndex++;
+  }
+  
+  return users;
+}
 
-
-const USER_2_ID = process.env.USER_2_ID;
-const USER_2_NAME = process.env.USER_2_NAME;
-const USER_2_EMAIL = process.env.USER_2_EMAIL;
+const USERS = loadUsers();
 
 function getUserEmail(msg) {
   let message = msg.author || msg.from;
+  console.log('Full message.author/from:', message);
+  
+  // Tenta diferentes formatos de ID
   let userId = message.substring(0, 14);
-  console.log('userId: ', userId);
+  console.log('userId (primeiros 14 chars):', userId);
 
+  // Procura nos usuários configurados
+  for (const [index, user] of Object.entries(USERS)) {
+    if (userId === user.id || userId.includes(user.id)) {
+      console.log(`✅ Identificado como USER_${index}`);
+      return user.email;
+    }
+  }
 
-  if (userId === USER_1_ID) return USER_1_EMAIL;
-  if (userId === USER_2_ID) return USER_2_EMAIL;
+  // Se não encontrou, tenta com todo o ID antes do @
+  const fullUserId = message.split('@')[0];
+  console.log('fullUserId:', fullUserId);
+  
+  for (const [index, user] of Object.entries(USERS)) {
+    if (fullUserId === user.id) {
+      console.log(`✅ Identificado como USER_${index} (full ID)`);
+      return user.email;
+    }
+  }
 
+  console.log('❌ Usuário não reconhecido');
   return null;
 }
 
 function getUserName(msg) {
   let message = msg.author || msg.from;
 
+  // Tenta diferentes formatos de ID
   let userId = message.substring(0, 14);
 
-  if (userId === USER_1_ID) return USER_1_NAME;
-  if (userId === USER_2_ID) return USER_2_NAME;
+  // Procura nos usuários configurados
+  for (const [index, user] of Object.entries(USERS)) {
+    if (userId === user.id || userId.includes(user.id)) {
+      return user.name;
+    }
+  }
+
+  // Se não encontrou, tenta com todo o ID antes do @
+  const fullUserId = message.split('@')[0];
+  
+  for (const [index, user] of Object.entries(USERS)) {
+    if (fullUserId === user.id) {
+      return user.name;
+    }
+  }
 
   return null;
 }

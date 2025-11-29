@@ -3,6 +3,7 @@
 const qrcode = require("qrcode-terminal");
 const client = require("./client");
 const { handleMessage } = require("./messageRouter");
+const { syncMessagesOnStartup } = require("./services/messageSyncManager");
 
 console.log("Iniciando aplicação...");
 
@@ -13,8 +14,11 @@ client.on("qr", (qr) => {
 });
 
 // Evento de cliente pronto
-client.on("ready", () => {
+client.on("ready", async () => {
   console.log("✅ Cliente do WhatsApp está pronto!");
+  
+  // Sincroniza mensagens na inicialização
+  await syncMessagesOnStartup(client);
 });
 
 // Evento de erro de autenticação

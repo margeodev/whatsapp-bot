@@ -121,4 +121,23 @@ async function listarTotaisPorCategoria(userEmail, userName) {
     userEmail
   );
 }
-module.exports = { salvarMensagem, listarMensagensPessoais, listarTotaisPorCategoria, listarCategorias };
+/**
+ * Busca as últimas N despesas registradas na API
+ * @param {string} userEmail email do usuário
+ * @param {number} limit quantidade de despesas a buscar
+ */
+async function listarUltimasDespesas(userEmail, limit = 10) {
+  console.log(`[API] Buscando ${limit} últimas despesas para ${userEmail}...`);
+  return handleRequest(
+    async () => {
+      const headers = await authHeaders(userEmail);
+      console.log(`[API] Fazendo GET ${API_URL}/api/v1/expenses/${limit}`);
+      const response = await axios.get(`${API_URL}/api/v1/expenses/${limit}`, { headers });
+      console.log(`[API] Resposta recebida: ${response.data?.length || 0} despesas`);
+      return response.data;
+    },
+    `${limit} últimas despesas recuperadas com sucesso!`,
+    userEmail
+  );
+}
+module.exports = { salvarMensagem, listarMensagensPessoais, listarTotaisPorCategoria, listarCategorias, listarUltimasDespesas };
