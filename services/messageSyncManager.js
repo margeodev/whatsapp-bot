@@ -95,26 +95,28 @@ async function performSync(client) {
       console.log(`   IDs no cache: ${Object.keys(cacheStats.cache).slice(0, 3).join(", ")}${Object.keys(cacheStats.cache).length > 3 ? "..." : ""}`);
     }
     
-    let syncedCount = 0;
-    let skippedCount = 0;
-    let ignoredCount = 0;
+    // Use Sets to track unique message IDs and avoid double counting
+    const syncedSet = new Set();
+    const skippedSet = new Set();
+    const ignoredSet = new Set();
 
     for (const message of whatsappMessages) {
       console.log(`\n--- Processando mensagem ---`);
       console.log(`   Body: "${message.body.substring(0, 50)}${message.body.length > 50 ? '...' : ''}"`);
       console.log(`   From: ${message.from}`);
+      const msgKey = message.id?.id || `${message.from}_${message.t || message.timestamp || Date.now()}`;
       
       // FILTRA: Ignora apenas mensagens do bot (USER_3)
       if (message.from === `558391264053@c.us`) {
         console.log(`   ⏭️  Ignorada (bot)`);
-        ignoredCount++;
+        ignoredSet.add(msgKey);
         continue;
       }
       
       // Ignora mensagens sem conteúdo
       if (!message.body) {
         console.log(`   ⏭️  Ignorada (sem conteúdo)`);
-        ignoredCount++;
+        ignoredSet.add(msgKey);
         continue;
       }
       
@@ -122,7 +124,7 @@ async function performSync(client) {
       console.log(`   Email do usuário: ${userEmail}`);
       if (!userEmail) {
         console.log(`   ❌ Usuário não reconhecido`);
-        ignoredCount++;
+        ignoredSet.add(msgKey);
         continue;
       }
 
@@ -131,7 +133,7 @@ async function performSync(client) {
       console.log(`   Parse result:`, parseResult);
       if (!parseResult) {
         console.log(`   ⏭️  Não é um formato válido de despesa`);
-        ignoredCount++;
+        ignoredSet.add(msgKey);
         continue;
       }
 
@@ -146,7 +148,7 @@ async function performSync(client) {
       // PRIMEIRA VERIFICAÇÃO: Verifica se já foi sincronizada (cache persistente)
       if (isMessageAlreadySynced(messageId)) {
         console.log(`   ⏭️  Pulando (já processada no cache)`);
-        skippedCount++;
+        skippedSet.add(messageId);
         continue;
       }
 
@@ -158,7 +160,7 @@ async function performSync(client) {
         console.log(`   ⏭️  Já sincronizada (API)`);
         // Marca como sincronizada no cache para futuras reinicializações
         markMessageAsSynced(messageId, description, amount, userEmail, isPersonal);
-        skippedCount++;
+        skippedSet.add(messageId);
         continue;
       }
 
@@ -173,9 +175,10 @@ async function performSync(client) {
         console.log(`   API Response: success=${result.success}, error=${result.error}`);
 
         if (result.success) {
-          syncedCount++;
           // Marca como sincronizada no cache
           markMessageAsSynced(messageId, description, amount, userEmail, isPersonal);
+          // Registra no set de sincronizados
+          syncedSet.add(messageId);
           console.log(`   ✅ Sincronizado com sucesso! (ID: ${messageId})`);
           
           // Envia mensagem de confirmação no chat
@@ -192,10 +195,14 @@ async function performSync(client) {
       }
     }
 
+    const finalSynced = syncedSet.size;
+    const finalSkipped = skippedSet.size;
+    const finalIgnored = ignoredSet.size;
+
     console.log(`\n✅ Sincronização completa!`);
-    console.log(`   • Sincronizadas: ${syncedCount}`);
-    console.log(`   • Já existentes: ${skippedCount}`);
-    console.log(`   • Ignoradas: ${ignoredCount}\n`);
+    console.log(`   • Sincronizadas: ${finalSynced}`);
+    console.log(`   • Já existentes: ${finalSkipped}`);
+    console.log(`   • Ignoradas: ${finalIgnored}\n`);
 
   } catch (err) {
     console.error(`❌ Erro durante sincronização de mensagens:`, err.message);

@@ -18,6 +18,9 @@ logs/
 # Ambiente
 .env
 
+# Cache
+.cache/
+
 # Sistema
 .DS_Store
 Thumbs.db
