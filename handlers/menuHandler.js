@@ -68,7 +68,7 @@ const handleListPersonalExpenses = async (chat, userEmail, userName) => {
 
         if (!result.success) {
             try {
-                await chat.sendMessage("⚠️ Não foi possível consultar as despesas pessoais. Tente novamente mais tarde.");
+                await sendMessageSafely(chat, "⚠️ Não foi possível consultar as despesas pessoais. Tente novamente mais tarde.");
             } catch (msgError) {
                 console.error("❌ Erro ao enviar mensagem de erro:", msgError);
             }
@@ -78,7 +78,7 @@ const handleListPersonalExpenses = async (chat, userEmail, userName) => {
         // A formatação da resposta agora vem do nosso "view"
         const reply = formatPersonalExpenses(result.data);
         try {
-            await chat.sendMessage(reply);
+            await sendMessageSafely(chat, reply);
         } catch (msgError) {
             console.error("❌ Erro ao enviar despesas pessoais:", msgError);
         }
@@ -89,7 +89,7 @@ const handleListPersonalExpenses = async (chat, userEmail, userName) => {
     } catch (err) {
         console.error("❌ Erro em handleListPersonalExpenses:", err.message);
         try {
-            await chat.sendMessage("⚠️ Erro inesperado ao consultar despesas pessoais.");
+            await sendMessageSafely(chat, "⚠️ Erro inesperado ao consultar despesas pessoais.");
         } catch (msgError) {
             console.error("❌ Erro ao enviar mensagem de erro:", msgError);
         }
@@ -106,7 +106,7 @@ const handleShowTotalExpenses = async (chat, userEmail, userName) => {
 
         if (!result.success) {
             try {
-                await chat.sendMessage("⚠️ Não foi possível consultar o total de despesas. Tente novamente mais tarde.");
+                await sendMessageSafely(chat, "⚠️ Não foi possível consultar o total de despesas. Tente novamente mais tarde.");
             } catch (msgError) {
                 console.error("❌ Erro ao enviar mensagem de erro:", msgError);
             }
@@ -115,7 +115,7 @@ const handleShowTotalExpenses = async (chat, userEmail, userName) => {
 
         const reply = formatTotalExpenses(result.data);
         try {
-            await chat.sendMessage(reply);
+            await sendMessageSafely(chat, reply);
         } catch (msgError) {
             console.error("❌ Erro ao enviar total de despesas:", msgError);
         }
@@ -126,7 +126,7 @@ const handleShowTotalExpenses = async (chat, userEmail, userName) => {
     } catch (err) {
         console.error("❌ Erro em handleShowTotalExpenses:", err.message);
         try {
-            await chat.sendMessage("⚠️ Erro inesperado ao consultar o total de despesas.");
+            await sendMessageSafely(chat, "⚠️ Erro inesperado ao consultar o total de despesas.");
         } catch (msgError) {
             console.error("❌ Erro ao enviar mensagem de erro:", msgError);
         }
