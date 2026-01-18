@@ -2,6 +2,7 @@ const api = require("../services/apiService");
 const { getCategoryId } = require("../utils/category");
 const { getUserEmail } = require("../utils/user");
 const { isMessageAlreadySynced, markMessageAsSynced } = require("../utils/syncCache");
+const { sendMessageSafely } = require("../utils/messageHelper");
 require("dotenv").config();
 
 const GROUP_NAME = process.env.GROUP_NAME;
@@ -185,8 +186,12 @@ async function performSync(client) {
           const { formatNewExpenseSuccess } = require("../views/messages");
           const categoryName = require("../utils/category").getCategoryName(categoryId);
           const confirmationMsg = formatNewExpenseSuccess(description, amount, categoryName, isPersonal);
-          await targetChat.sendMessage(confirmationMsg);
-          console.log(`   💬 Confirmação enviada ao chat`);
+          try {
+            await sendMessageSafely(targetChat, confirmationMsg);
+            console.log(`   💬 Confirmação enviada ao chat`);
+          } catch (msgError) {
+            console.error(`   ❌ Erro ao enviar confirmação:`, msgError.message);
+          }
         } else {
           console.log(`   ❌ Erro ao sincronizar: ${result.error}`);
         }
@@ -196,13 +201,9 @@ async function performSync(client) {
     }
 
     const finalSynced = syncedSet.size;
-    const finalSkipped = skippedSet.size;
-    const finalIgnored = ignoredSet.size;
 
     console.log(`\n✅ Sincronização completa!`);
-    console.log(`   • Sincronizadas: ${finalSynced}`);
-    console.log(`   • Já existentes: ${finalSkipped}`);
-    console.log(`   • Ignoradas: ${finalIgnored}\n`);
+    console.log(`   • Sincronizadas: ${finalSynced}\n`);
 
   } catch (err) {
     console.error(`❌ Erro durante sincronização de mensagens:`, err.message);
