@@ -4,25 +4,30 @@ const api = require("../services/apiService");
 const { getUserEmail } = require("../utils/user");
 const { getCategoryId, getCategoryName } = require("../utils/category");
 const { formatNewExpenseSuccess } = require("../views/messages");
+const { sendMessageSafely } = require("../utils/messageHelper");
 
 const handle = async (message) => {
-  const userEmail = getUserEmail(message);
-  const chat = await message.getChat();
-  const body = message.body.trim(); // Não usamos toLowerCase() aqui para manter a descrição original
-
-  const rawTokens = body.split(/[,|-]/).map((t) => t.trim());
-  let isPersonal = false;
-  let description = "";
-  let amount = "";
-
   try {
+    const userEmail = getUserEmail(message);
+    const chat = await message.getChat();
+    const body = message.body.trim(); // Não usamos toLowerCase() aqui para manter a descrição original
+
+    const rawTokens = body.split(/[,|-]/).map((t) => t.trim());
+    let isPersonal = false;
+    let description = "";
+    let amount = "";
+
     // 1. Parseamento da Mensagem
     if (rawTokens[0]?.toLowerCase() === "pessoal") {
       isPersonal = true;
       if (rawTokens.length < 3) {
-        await chat.sendMessage(
-          `⚠️ Formato inválido para mensagem pessoal!\nUse: "pessoal, descrição, valor" ou "pessoal - descrição - valor"`
-        );
+        try {
+          await sendMessageSafely(chat, 
+            `⚠️ Formato inválido para mensagem pessoal!\nUse: "pessoal, descrição, valor" ou "pessoal - descrição - valor"`
+          );
+        } catch (msgError) {
+          console.error("❌ Erro ao enviar mensagem:", msgError);
+        }
         return;
       }
       description = rawTokens[1];
@@ -39,17 +44,25 @@ const handle = async (message) => {
 
     // 2. Validação dos Dados
     if (!description || !amount) {
-      await chat.sendMessage(
-        `⚠️ Formato inválido!\nUse: "descrição, valor" ou "pessoal, descrição, valor"`
-      );
+      try {
+        await sendMessageSafely(chat, 
+          `⚠️ Formato inválido!\nUse: "descrição, valor" ou "pessoal, descrição, valor"`
+        );
+      } catch (msgError) {
+        console.error("❌ Erro ao enviar mensagem:", msgError);
+      }
       return;
     }
 
     const sanitizedAmount = amount.replace(",", ".");
     if (isNaN(Number(sanitizedAmount))) {
-      await chat.sendMessage(
-        `⚠️ Valor inválido. Certifique-se de enviar um número.\nExemplo: "Almoço, 25.50"`
-      );
+      try {
+        await sendMessageSafely(chat, 
+          `⚠️ Valor inválido. Certifique-se de enviar um número.\nExemplo: "Almoço, 25.50"`
+        );
+      } catch (msgError) {
+        console.error("❌ Erro ao enviar mensagem:", msgError);
+      }
       return;
     }
     
@@ -63,14 +76,27 @@ const handle = async (message) => {
     // 4. Envio da Resposta
     if (result?.success) {
       const reply = formatNewExpenseSuccess(description, sanitizedAmount, categoryName, isPersonal);
-      await chat.sendMessage(reply);
+      try {
+        await sendMessageSafely(chat, reply);
+      } catch (msgError) {
+        console.error("❌ Erro ao enviar confirmação:", msgError);
+      }
     } else {
-      await chat.sendMessage("❌ Ocorreu um erro ao incluir o registro, tente novamente.");
+      try {
+        await sendMessageSafely(chat, "❌ Ocorreu um erro ao incluir o registro, tente novamente.");
+      } catch (msgError) {
+        console.error("❌ Erro ao enviar mensagem de erro:", msgError);
+      }
     }
 
   } catch (err) {
     console.error("❌ Erro inesperado no newExpenseHandler:", err.message);
-    await chat.sendMessage("⚠️ Erro inesperado ao processar sua mensagem.");
+    try {
+      const chat = await message.getChat();
+      await sendMessageSafely(chat, "⚠️ Erro inesperado ao processar sua mensagem.");
+    } catch (msgError) {
+      console.error("❌ Erro ao enviar mensagem de erro:", msgError);
+    }
   }
 };
 

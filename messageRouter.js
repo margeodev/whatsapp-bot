@@ -2,6 +2,7 @@ require("dotenv").config();
 const { getUserEmail, getUserName } = require("./utils/user");
 const { getUserState, setUserState } = require("./state/stateManager");
 const { getMainMenu } = require("./views/messages");
+const { sendMessageSafely } = require("./utils/messageHelper");
 const totalHandler = require('./handlers/totalHandler');
 
 // Importaremos nossos futuros handlers aqui
@@ -32,7 +33,13 @@ const handleMessage = async (message) => {
         // Comando global para chamar o menu a qualquer momento
         if (body === "menu") {
             setUserState(userEmail, "awaitingMenuOption");
-            await chat.sendMessage(getMainMenu());
+            try {
+                const menuMessage = getMainMenu();
+                await sendMessageSafely(chat, menuMessage);
+            } catch (sendError) {
+                console.error("❌ Erro ao enviar menu após múltiplas tentativas:", sendError.message);
+                // Não tenta mais fallback pois o problema é mais profundo
+            }
             return;
         }
 
@@ -63,8 +70,14 @@ const handleMessage = async (message) => {
     } catch (error) {
         console.error("❌ Erro inesperado no messageRouter:", error);
         // Idealmente, poderíamos enviar uma mensagem de erro para o chat aqui
-        const chat = await message.getChat();
-        await chat.sendMessage("⚠️ Ocorreu um erro inesperado. Tente novamente mais tarde.");
+        try {
+            const chat = await message.getChat();
+            if (chat && !chat.isGroup) {
+                await chat.sendMessage("⚠️ Ocorreu um erro inesperado. Tente novamente mais tarde.");
+            }
+        } catch (msgError) {
+            console.error("❌ Erro ao enviar mensagem de erro:", msgError);
+        }
     }
 };
 

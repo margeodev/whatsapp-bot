@@ -11,6 +11,9 @@ const client = new Client({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   },
+  webVersionCache: {
+    type: 'local',
+  },
 });
 
 module.exports = client;
